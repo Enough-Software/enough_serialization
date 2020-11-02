@@ -17,7 +17,11 @@ void main() {
         ..myEnum = MySerializableEnum.value3
         ..myText = 'Hello "World"'
         ..myList = ['one', 'two', 'three']
-        ..myChild = child;
+        ..myChild = child
+        ..events = [
+          StartEvent()..players = [232, 12, 2423, 99],
+          EndEvent()..winner = 2423
+        ];
     });
 
     test('Serialize', () {
@@ -32,7 +36,7 @@ void main() {
 
     test('Deserialize', () {
       final jsonText =
-          r'{"my-number": 13, "my-enum": 2, "my-text": "Hello \"World\"", "my-list": ["one", "two", "three"], "my-serializable": {"my-text": "hi this is the child element", "my-number": 23}}';
+          r'{"my-number": 13, "my-enum": 2, "my-text": "Hello \"World\"", "my-list": ["one", "two", "three"], "my-serializable": {"my-text": "hi this is the child element", "my-number": 23, "my-serializable": null}, "events": [{"type": 0, "players": [232, 12, 2423, 99]}, {"type": 1, "winner": 2423}]}';
 
       final serializer = Serializer();
       final serializable = MySerializable();
@@ -46,20 +50,65 @@ void main() {
       expect(serializable.myChild, isNotNull);
       expect(serializable.myChild.myText, 'hi this is the child element');
       expect(serializable.myChild.myNumber, 23);
+      expect(serializable.events, isNotEmpty);
+      expect(serializable.events.length, 2);
+      expect(serializable.events[0], isA<StartEvent>());
+      expect(serializable.events[0].type, EventType.start);
+      expect(
+          (serializable.events[0] as StartEvent).players, [232, 12, 2423, 99]);
+
+      expect(serializable.events[1], isA<EndEvent>());
+      expect(serializable.events[1].type, EventType.end);
+      expect((serializable.events[1] as EndEvent).winner, 2423);
     });
   });
 }
 
 enum MySerializableEnum { value1, value2, value3 }
 
+enum EventType { start, end }
+
+class Event extends SerializableObject {
+  EventType get type => attributes['type'];
+  set type(EventType value) => attributes['type'] = value;
+
+  Event(EventType type) {
+    this.type = type;
+    transformers['type'] =
+        (value) => value is EventType ? value.index : EventType.values[value];
+  }
+}
+
+class StartEvent extends Event {
+  StartEvent() : super(EventType.start) {
+    listCreators['players'] = () => <int>[];
+  }
+
+  List<int> get players => attributes['players'];
+  set players(List<int> value) => attributes['players'] = value;
+}
+
+class EndEvent extends Event {
+  EndEvent() : super(EventType.end);
+
+  int get winner => attributes['winner'];
+  set winner(int value) => attributes['winner'] = value;
+}
+
 class MySerializable extends SerializableObject {
   MySerializable() {
-    deserializers['my-list'] = () => <String>[];
-    deserializers['my-serializable'] = () => MySerializable();
+    listCreators['my-list'] = () => <String>[];
+    listCreators['events'] = () => <Event>[];
+    objectCreators['my-serializable'] = (map) => MySerializable();
+    objectCreators['events'] =
+        (map) => map['type'] == 0 ? StartEvent() : EndEvent();
     transformers['my-enum'] = (value) => value is MySerializableEnum
         ? value.index
         : MySerializableEnum.values[value];
   }
+
+  List<Event> get events => attributes['events'];
+  set events(List<Event> value) => attributes['events'] = value;
 
   MySerializableEnum get myEnum => attributes['my-enum'];
   set myEnum(MySerializableEnum value) => attributes['my-enum'] = value;

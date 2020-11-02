@@ -1,8 +1,6 @@
-/// Support for doing something awesome.
+/// Serialze and deserialize your Dart classes.
 ///
-/// More dartdocs go here.
+/// Extend either `SerializableObject` or implement the more low-lewel `Serializable` class in your model classes.
 library enough_serialization;
 
 export 'src/serializable.dart';
-
-// TODO: Export any libraries intended for clients of this package.
