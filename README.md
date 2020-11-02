@@ -103,7 +103,7 @@ If you have a non-generic list, you define a corresponding function in the `list
 listCreators['articles'] = () => <Article>[];
 ```
 When you have nested objects, register a creation function in the `objectCreators` field. This function 
-receives a `Map<String,dynamic>` with the values of the nested child object. If needed, you can evaluate 
+receives a `Map<String,dynamic>` parameter with the values of the nested child object. If needed, you can evaluate 
 these values to determine which kind of object you need to create:
 ```dart
 // simple:
@@ -124,6 +124,8 @@ objectCreators['articles'] = (map) {
 
 Here's a complete example with nested objects and complex list elements:
 ```dart
+enum ArticleArea { electronics, music }
+
 class Article extends SerializableObject {
   Article() {
     transformers['area'] = (value) =>
