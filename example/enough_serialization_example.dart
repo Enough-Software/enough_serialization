@@ -6,6 +6,8 @@ void main() {
   enumExample();
   print('');
   complexExample();
+  print('');
+  mapExample();
 }
 
 class SimpleArticle extends SerializableObject {
@@ -20,7 +22,7 @@ class SimpleArticle extends SerializableObject {
 }
 
 void simpleExample() {
-  print('simple example');
+  print('simple example:');
   final article = SimpleArticle()
     ..name = 'Remote Control'
     ..price = 2499
@@ -54,7 +56,7 @@ class ArticleWithEnum extends SerializableObject {
 }
 
 void enumExample() {
-  print('emum example');
+  print('emum example:');
   final article = ArticleWithEnum()
     ..area = ArticleArea.electronics
     ..name = 'Remote Control';
@@ -119,8 +121,9 @@ class Band extends SerializableObject {
 
 class Order extends SerializableObject {
   Order() {
-    listCreators['articles'] = () => <Article>[];
-    objectCreators['articles'] = (map) {
+    objectCreators['articles'] = (map) => <Article>[];
+    // the list articles contains different Articel instances depending on the specified area field:
+    objectCreators['articles.value'] = (map) {
       final int areaIndex = map['area'];
       final area = ArticleArea.values[areaIndex];
       switch (area) {
@@ -138,7 +141,7 @@ class Order extends SerializableObject {
 }
 
 void complexExample() {
-  print('complex example');
+  print('complex example:');
   final order = Order()
     ..articles = [
       ElectronicsArticle()
@@ -175,5 +178,43 @@ void complexExample() {
       print('$i: band-name: ${article.band.name}');
       print('$i: band-year: ${article.band.year}');
     }
+  }
+}
+
+class MappedArticle extends SerializableObject {
+  MappedArticle() {
+    objectCreators['news-by-year'] = (map) => <int, String>{};
+    transformers['news-by-year.key'] =
+        (value) => value is int ? value.toString() : int.parse(value);
+  }
+
+  String get name => attributes['name'];
+  set name(String value) => attributes['name'] = value;
+
+  Map<int, String> get newsByYear => attributes['news-by-year'];
+  set newsByYear(Map<int, String> value) => attributes['news-by-year'] = value;
+}
+
+void mapExample() {
+  print('map example:');
+  final newsByYear = {
+    2020: 'Corona, Corona, Corona...',
+    2021: 'The end of a pandemia',
+    2022: 'Climate change getting really serious'
+  };
+  final article = MappedArticle()
+    ..name = 'My Article'
+    ..newsByYear = newsByYear;
+  final serializer = Serializer();
+  final json = serializer.serialize(article);
+  print('article with map: $json');
+
+  final inputJson =
+      '{"name": "My Article", "news-by-year": {"2020": "Corona, Corona, Corona...", "2021": "The end of a pandemic", "2022": "Climate change getting really serious"}}';
+  final deserializedArticle = MappedArticle();
+  serializer.deserialize(inputJson, deserializedArticle);
+  print('article: ${article.name}');
+  for (final key in article.newsByYear.keys) {
+    print('$key: ${article.newsByYear[key]}');
   }
 }

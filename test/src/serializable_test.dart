@@ -8,6 +8,11 @@ void main() {
     MySerializable mySerializable;
 
     setUp(() {
+      final props = {'firstname': 'firstValue', 'second': 'another value'};
+      final newsByYear = {
+        2020: 'enough serialization started',
+        2021: 'the future is there'
+      };
       final child = MySerializable()
         ..myText = 'hi this is the child element'
         ..myNumber = 23
@@ -21,7 +26,9 @@ void main() {
         ..events = [
           StartEvent()..players = [232, 12, 2423, 99],
           EndEvent()..winner = 2423
-        ];
+        ]
+        ..properties = props
+        ..newsByYear = newsByYear;
     });
 
     test('Serialize', () {
@@ -36,7 +43,7 @@ void main() {
 
     test('Deserialize', () {
       final jsonText =
-          r'{"my-number": 13, "my-enum": 2, "my-text": "Hello \"World\"", "my-list": ["one", "two", "three"], "my-serializable": {"my-text": "hi this is the child element", "my-number": 23, "my-serializable": null}, "events": [{"type": 0, "players": [232, 12, 2423, 99]}, {"type": 1, "winner": 2423}]}';
+          r'{"my-number": 13, "my-enum": 2, "my-text": "Hello \"World\"", "my-list": ["one", "two", "three"], "my-serializable": {"my-text": "hi this is the child element", "my-number": 23, "my-serializable": null}, "events": [{"type": 0, "players": [232, 12, 2423, 99]}, {"type": 1, "winner": 2423}], "properties": {"firstname": "firstValue", "second": "another value"}, "news-by-year": {"2020": "enough serialization started", "2021": "the future is there"}}';
 
       final serializer = Serializer();
       final serializable = MySerializable();
@@ -60,6 +67,11 @@ void main() {
       expect(serializable.events[1], isA<EndEvent>());
       expect(serializable.events[1].type, EventType.end);
       expect((serializable.events[1] as EndEvent).winner, 2423);
+      expect(serializable.properties, isNotNull);
+      expect(serializable.properties['firstname'], 'firstValue');
+      expect(serializable.properties['second'], 'another value');
+      expect(serializable.newsByYear[2020], 'enough serialization started');
+      expect(serializable.newsByYear[2021], 'the future is there');
     });
   });
 }
@@ -81,7 +93,7 @@ class Event extends SerializableObject {
 
 class StartEvent extends Event {
   StartEvent() : super(EventType.start) {
-    listCreators['players'] = () => <int>[];
+    objectCreators['players'] = (map) => <int>[];
   }
 
   List<int> get players => attributes['players'];
@@ -97,11 +109,15 @@ class EndEvent extends Event {
 
 class MySerializable extends SerializableObject {
   MySerializable() {
-    listCreators['my-list'] = () => <String>[];
-    listCreators['events'] = () => <Event>[];
+    objectCreators['my-list'] = (map) => <String>[];
+    objectCreators['events'] = (map) => <Event>[];
     objectCreators['my-serializable'] = (map) => MySerializable();
-    objectCreators['events'] =
+    objectCreators['events.value'] =
         (map) => map['type'] == 0 ? StartEvent() : EndEvent();
+    objectCreators['properties'] = (map) => <String, String>{};
+    objectCreators['news-by-year'] = (map) => <int, String>{};
+    transformers['news-by-year.key'] =
+        (value) => value is int ? value.toString() : int.parse(value);
     transformers['my-enum'] = (value) => value is MySerializableEnum
         ? value.index
         : MySerializableEnum.values[value];
@@ -124,4 +140,10 @@ class MySerializable extends SerializableObject {
 
   MySerializable get myChild => attributes['my-serializable'];
   set myChild(MySerializable value) => attributes['my-serializable'] = value;
+
+  Map<String, String> get properties => attributes['properties'];
+  set properties(Map<String, String> value) => attributes['properties'] = value;
+
+  Map<int, String> get newsByYear => attributes['news-by-year'];
+  set newsByYear(Map<int, String> value) => attributes['news-by-year'] = value;
 }
