@@ -8,6 +8,8 @@ void main() {
   complexExample();
   print('');
   mapExample();
+  print('');
+  onDemandExample();
 }
 
 class SimpleArticle extends SerializableObject {
@@ -213,7 +215,74 @@ void mapExample() {
       '{"name": "My Article", "news-by-year": {"2020": "Corona, Corona, Corona...", "2021": "The end of a pandemic", "2022": "Climate change getting really serious"}}';
   final deserializedArticle = MappedArticle();
   serializer.deserialize(inputJson, deserializedArticle);
-  print('article: ${article.name}');
+  print('deserialized article: ${article.name}');
+  for (final key in article.newsByYear.keys) {
+    print('$key: ${article.newsByYear[key]}');
+  }
+}
+
+class OnDemandArticle implements OnDemandSerializable {
+  String name;
+  Map<int, String> newsByYear;
+
+  String serialize() {
+    final serializer = Serializer();
+    final json = serializer.serializeOnDemand(
+      this,
+      transformers: {
+        'news-by-year.key': (value) =>
+            value is int ? value.toString() : int.parse(value),
+      },
+    );
+    return json;
+  }
+
+  void deserialize(String json) {
+    final serializer = Serializer();
+    serializer.deserializeOnDemand(
+      json,
+      this,
+      transformers: {
+        'news-by-year.key': (value) =>
+            value is int ? value.toString() : int.parse(value),
+      },
+      objectCreators: {
+        'news-by-year': (map) => <int, String>{},
+      },
+    );
+  }
+
+  @override
+  void write(Map<String, dynamic> attributes) {
+    attributes['name'] = name;
+    attributes['news-by-year'] = newsByYear;
+  }
+
+  @override
+  void read(Map<String, dynamic> attributes) {
+    name = attributes['name'];
+    newsByYear = attributes['news-by-year'];
+  }
+}
+
+void onDemandExample() {
+  print('on demand example:');
+  final newsByYear = {
+    2020: 'Corona, Corona, Corona...',
+    2021: 'The end of a pandemia',
+    2022: 'Climate change getting really serious'
+  };
+  final article = OnDemandArticle()
+    ..name = 'My Article'
+    ..newsByYear = newsByYear;
+  final json = article.serialize();
+  print('on demand article: $json');
+
+  final inputJson =
+      '{"name": "My Article", "news-by-year": {"2020": "Corona, Corona, Corona...", "2021": "The end of a pandemic", "2022": "Climate change getting really serious"}}';
+  final deserializedArticle = OnDemandArticle();
+  deserializedArticle.deserialize(inputJson);
+  print('deserialized article: ${article.name}');
   for (final key in article.newsByYear.keys) {
     print('$key: ${article.newsByYear[key]}');
   }

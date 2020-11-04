@@ -1,6 +1,6 @@
 name: enough_serialization
-description: Runtime solution for serializing and deserialzing JSON. Next to the basic JSON types like numeric, text and boolean values, enough_serialization also supports non-generic lists, enums or complex nested objects.
-version: 1.0.1
+description: Runtime solution for serializing to and deserializing from JSON.  enough_serialization also supports non-generic lists, enums and complex nested objects.
+version: 1.1.0
 homepage: https://www.github.com/enough-software/enough_serialization
 
 environment:

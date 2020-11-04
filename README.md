@@ -14,14 +14,20 @@ The latest version or `enough_serialization` is [![enough_serialization version]
 
 ## Usage
 
+You can choose between two serialization modes:
+
+1. Extend `SerializableObject` or implement `Serializable` for full control and complex cases. You have to store your field values in a dynamic map, however.
+2. Implement `OnDemandSerializable` to only write and read your field values to/from a dynamic map when needed. This comes with limitations when having deep nested structures - in that case any serialization names of complex fields must be unique.  
+
+### Serilization with `Serializable` and `SerializableObject`
+
 The easiest way is 
  * extend `SerializableObject`
  * define a `get` and `set` field for each supported attribute and retrieve value from / store values to the `attributes` map.
- * if you have non-generic `List`s field, define a function that creates such a new list for the corresponding attribute name in the `listCreators` field.
- * if you have nested objects, define a function that creates new object instances for the corresponding attribute name in the `objectCreators` field.
- * if you want to store other values such as an `enum`, register a transformation function in the `transformer` field.
+ * if you have nested objects such as lists, maps or other serializable objects, define a function that creates new object instances for the corresponding attribute name in the `objectCreators` field.
+ * if you want to store other values such as an `enum`, register a transformation function in the `transformer` field. This can also be done for map keys and for map/list values.
 
-### Simple Example
+#### Simple Example
 When you have only basic fields such as `String`, `int`, `double`, `bool` the usage is straight forward:
 
 ```dart
@@ -57,7 +63,7 @@ void main() {
 }
 ```
 
-### Enum Example
+#### Enum Example
 Enumerations cannot be serialized or deserialized automatically. To support `enum` fields, register a `transformer` function:
 ```dart
 transformers['area'] = (value) =>
@@ -97,19 +103,18 @@ void main() {
 }
 ```
 
-### Lists and Nested Objects
-If you have a non-generic list, you define a corresponding function in the `listCreators` field:
-```dart
-listCreators['articles'] = () => <Article>[];
-```
-When you have nested objects, register a creation function in the `objectCreators` field. This function 
+#### Lists and Nested Serializable Objects
+When you have nested objects, register a creation function in the `objectCreators` field. For nested maps and objects this function 
 receives a `Map<String,dynamic>` parameter with the values of the nested child object. If needed, you can evaluate 
 these values to determine which kind of object you need to create:
+
 ```dart
-// simple:
+// create a list:
+objectCreators['articles'] = (map) => <Article>[];
+// create a nested simple object:
 objectCreators['band'] = (map) => Band();
-// complex:
-objectCreators['articles'] = (map) {
+// created a nested complex field in a list:
+objectCreators['articles.value'] = (map) {
       final int areaIndex = map['area'];
       final area = ArticleArea.values[areaIndex];
       switch (area) {
@@ -176,8 +181,8 @@ class Band extends SerializableObject {
 
 class Order extends SerializableObject {
   Order() {
-    listCreators['articles'] = () => <Article>[];
-    objectCreators['articles'] = (map) {
+    objectCreators['articles'] = (map) => <Article>[];
+    objectCreators['articles.value'] = (map) {
       final int areaIndex = map['area'];
       final area = ArticleArea.values[areaIndex];
       switch (area) {
@@ -235,6 +240,158 @@ void main() {
 }
 ```
 
+#### Nested Maps
+When nesting maps, you also register your creator function in the `objectCreators`, e.g. 
+```dart
+objectCreators['news-by-year'] = (map) => <int, String>{};
+```
+When dealing with maps with non-String keys, you need to transform these to Strings and back to their original 
+form when deserializing. As for `enum`s you do this by registering a `transformer` function that receives the value. 
+You registers the function under the field name with a `.key` appended to it:
+```dart
+    transformers['news-by-year.key'] =
+        (value) => value is int ? value.toString() : int.parse(value);
+```
+
+Same as for lists, you can also register objectCreators and transformers for map values by appending a `.value` to the field's serialization name. 
+
+Here is a complete example for serializing an object with an embedded map:
+
+```dart
+class MappedArticle extends SerializableObject {
+  MappedArticle() {
+    objectCreators['news-by-year'] = (map) => <int, String>{};
+    transformers['news-by-year.key'] =
+        (value) => value is int ? value.toString() : int.parse(value);
+  }
+
+  String get name => attributes['name'];
+  set name(String value) => attributes['name'] = value;
+
+  Map<int, String> get newsByYear => attributes['news-by-year'];
+  set newsByYear(Map<int, String> value) => attributes['news-by-year'] = value;
+}
+
+void main() {
+  final newsByYear = {
+    2020: 'Corona, Corona, Corona...',
+    2021: 'The end of a pandemia',
+    2022: 'Climate change getting really serious'
+  };
+  final article = MappedArticle()
+    ..name = 'My Article'
+    ..newsByYear = newsByYear;
+  final serializer = Serializer();
+  final json = serializer.serialize(article);
+  print('article with map: $json');
+
+  final inputJson =
+      '{"name": "My Article", "news-by-year": {"2020": "Corona, Corona, Corona...", "2021": "The end of a pandemic", "2022": "Climate change getting really serious"}}';
+  final deserializedArticle = MappedArticle();
+  serializer.deserialize(inputJson, deserializedArticle);
+  print('article: ${article.name}');
+  for (final key in article.newsByYear.keys) {
+    print('$key: ${article.newsByYear[key]}');
+  }
+}
+```
+
+### On Demand Serialization
+Using a dynamic map for storing and retrieving fields requires you to create boiler-plate code and makes accessing fields slower.
+When you want to use normal fields, you can implement `OnDemandSerializable` instead:
+```dart
+class Article implements OnDemandSerializable {
+  int price;
+  String name;
+  
+
+  @override
+  void write(Map<String, dynamic> attributes) {
+    attributes['price'] = price;
+    attributes['name'] = name;
+  }
+
+  @override
+  void read(Map<String, dynamic> attributes) {
+    price = attributes['price'];
+    name = attributes['name'];
+  }
+```
+
+Use `Serializer.serializeOnDemand(OnDemandSerializable)` to create the JSON and `Serializer.deserializeOnDemand(String,OnDemandSerializable)`
+to deserialize your classes.
+
+In these calls you can optionally provide `transformers` and `objectCreators` to handle more complex scenarios like `enum`s, other nested `OnDemandSerializable`, `List` or `Map` fields. The registration is the same as for `Serializable`, however you have can only register these special cases at that point. This means that field names of special cases must be unique throughout your object's hierarchy.
+
+Here's a complete example of a complex structure with `OnDemandSerializable`:
+```dart
+class OnDemandArticle implements OnDemandSerializable {
+  String name;
+  Map<int, String> newsByYear;
+
+  String serialize() {
+    final serializer = Serializer();
+    final json = serializer.serializeOnDemand(
+      this,
+      transformers: {
+        'news-by-year.key': (value) =>
+            value is int ? value.toString() : int.parse(value),
+      },
+    );
+    return json;
+  }
+
+  void deserialize(String json) {
+    final serializer = Serializer();
+    serializer.deserializeOnDemand(
+      json,
+      this,
+      transformers: {
+        'news-by-year.key': (value) =>
+            value is int ? value.toString() : int.parse(value),
+      },
+      objectCreators: {
+        'news-by-year': (map) => <int, String>{},
+      },
+    );
+  }
+
+  @override
+  void write(Map<String, dynamic> attributes) {
+    attributes['name'] = name;
+    attributes['news-by-year'] = newsByYear;
+  }
+
+  @override
+  void read(Map<String, dynamic> attributes) {
+    name = attributes['name'];
+    newsByYear = attributes['news-by-year'];
+  }
+}
+
+void main() {
+  final newsByYear = {
+    2020: 'Corona, Corona, Corona...',
+    2021: 'The end of a pandemia',
+    2022: 'Climate change getting really serious'
+  };
+  final article = OnDemandArticle()
+    ..name = 'My Article'
+    ..newsByYear = newsByYear;
+  final json = article.serialize();
+  print('on demand article: $json');
+
+  final inputJson =
+      '{"name": "My Article", "news-by-year": {"2020": "Corona, Corona, Corona...", "2021": "The end of a pandemic", "2022": "Climate change getting really serious"}}';
+  final deserializedArticle = OnDemandArticle();
+  deserializedArticle.deserialize(inputJson);
+  print('deserialized article: ${article.name}');
+  for (final key in article.newsByYear.keys) {
+    print('$key: ${article.newsByYear[key]}');
+  }
+}
+```
+
 ## Features and bugs
 
 Please file feature requests and bugs at the [issue tracker][tracker].
@@ -243,4 +400,4 @@ Please file feature requests and bugs at the [issue tracker][tracker].
 
 ## License
 
-Licensed under the [MIT License](LICENSE).
+Licensed under the commercial friendly [MIT License](LICENSE).
