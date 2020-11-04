@@ -41,6 +41,26 @@ abstract class Serializable {
   Map<String, dynamic Function(Map<String, dynamic>)> get objectCreators;
 }
 
+/// Supports classes with normal fields.
+/// Instead of always keeping field values in the `attributes` field,
+/// the fields and their values are only written/read on demand when needed.
+abstract class OnDemandSerializable {
+  /// Sets all field keys and values in the specified [attributes] map.
+  /// This method is called before the serialization.
+  ///
+  /// Note: if you have complex fields such as nested objects, non generic lists or maps, you need to implement
+  /// both `Serializable` and `OnDemandSerializable`, extend `SerializableObject` and implement `OnDemandSerializable`,
+  /// or specify the corresponding `transformers` and `objectCreators` in the `Serializer` on demand methods.
+  ///
+  /// Compare `Serializer.serializeOnDemand()` and `Serializer.deserializeOnDemand()` methods.
+  /// ```dart
+  /// attributes['name'] = name;
+  /// attributes['price'] = price;
+  /// ```
+  void write(Map<String, dynamic> attributes);
+  void read(Map<String, dynamic> attributes);
+}
+
 /// Implementation of `Serializable`.
 /// Extend this class if in doubt.
 class SerializableObject implements Serializable {
@@ -69,11 +89,48 @@ class Serializer {
     return buffer.toString();
   }
 
+  String serializeOnDemand(OnDemandSerializable onDemandSerializable,
+      {Map<String, dynamic Function(dynamic)> transformers}) {
+    if (onDemandSerializable is Serializable) {
+      final serializable = onDemandSerializable as Serializable;
+      onDemandSerializable.write(serializable.attributes);
+      return serialize(serializable);
+    }
+    final genericSerializable = SerializableObject();
+    if (transformers != null) {
+      genericSerializable.transformers.addAll(transformers);
+    }
+    onDemandSerializable.write(genericSerializable.attributes);
+    return serialize(genericSerializable);
+  }
+
   /// Deserializes the given [jsonText] into the specified serializable [target].
   void deserialize(String jsonText, Serializable target) {
     final decoder = JsonDecoder();
     final json = decoder.convert(jsonText) as Map<String, dynamic>;
     _deserializeAttributes(json, target);
+  }
+
+  /// Deserializes the specied [jsonText] into the OnDemandSerializable [target].
+  /// Specify [transformers] to transform values such as enums or non-String Map keys.
+  /// Specify [objectCreators] when you have Lists, Map or nested objects.
+  void deserializeOnDemand(String jsonText, OnDemandSerializable target,
+      {Map<String, dynamic Function(dynamic)> transformers,
+      Map<String, dynamic Function(Map<String, dynamic>)> objectCreators}) {
+    if (target is Serializable) {
+      final serializable = target as Serializable;
+      deserialize(jsonText, serializable);
+      target.read(serializable.attributes);
+    }
+    final genericSerializable = SerializableObject();
+    if (transformers != null) {
+      genericSerializable.transformers.addAll(transformers);
+    }
+    if (objectCreators != null) {
+      genericSerializable.objectCreators.addAll(objectCreators);
+    }
+    deserialize(jsonText, genericSerializable);
+    target.read(genericSerializable.attributes);
   }
 
   void _serializeAttributes(Serializable parent,
@@ -131,6 +188,12 @@ class Serializer {
       _serializeAttributes(parent, transformedMap, buffer);
     } else if (value is Serializable) {
       _serializeAttributes(value, value.attributes, buffer);
+    } else if (value is OnDemandSerializable) {
+      final genericSerializable = SerializableObject();
+      genericSerializable.transformers.addAll(parent.transformers);
+      value.write(genericSerializable.attributes);
+      _serializeAttributes(
+          genericSerializable, genericSerializable.attributes, buffer);
     } else {
       final transform = parent.transformers[key];
       if (transform == null) {
@@ -175,7 +238,7 @@ class Serializer {
       }
       return listValue;
     } else if (value is Map<String, dynamic>) {
-      // this is a complex object
+      // this is a nested object or a nested map
       final function = parent.objectCreators[key];
       if (function == null) {
         throw StateError(
@@ -195,6 +258,12 @@ class Serializer {
               _deserializeValue(parent, '$mapKey.value', value[subKey]);
           serializableOrMap[mapKey] = deserializedValue;
         }
+      } else if (serializableOrMap is OnDemandSerializable) {
+        final genericSerializable = SerializableObject();
+        genericSerializable.objectCreators.addAll(parent.objectCreators);
+        genericSerializable.transformers.addAll(parent.transformers);
+        _deserializeAttributes(value, genericSerializable, key);
+        serializableOrMap.read(genericSerializable.attributes);
       } else {
         throw StateError(
             'Unsupported type ${serializableOrMap.runtimeType} for field "$key" - please return either Serializable or Map in your objectCreator.');
