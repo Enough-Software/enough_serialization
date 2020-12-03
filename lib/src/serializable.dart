@@ -107,6 +107,14 @@ class Serializer {
     return buffer.toString();
   }
 
+  /// Serializes the given list of [serializables].
+  /// Generates the JSON text representation.
+  String serializeList(List<Serializable> serializables) {
+    final buffer = StringBuffer();
+    _serializeValue(null, null, serializables, buffer);
+    return buffer.toString();
+  }
+
   /// Serializes an OnDemandSerializable object.
   String serializeOnDemand(OnDemandSerializable onDemandSerializable,
       {Map<String, dynamic Function(dynamic)> transformers}) {
@@ -128,6 +136,18 @@ class Serializer {
     final decoder = JsonDecoder();
     final json = decoder.convert(jsonText) as Map<String, dynamic>;
     _deserializeAttributes(json, target);
+  }
+
+  /// Deserializes the given [jsonText] into the specified list of serializables [target].
+  void deserializeList(String jsonText, List<Serializable> targetList,
+      Serializable Function(Map<String, dynamic>) creator) {
+    final decoder = JsonDecoder();
+    final jsonList = decoder.convert(jsonText) as List<dynamic>;
+    for (final json in jsonList) {
+      final target = creator(json);
+      _deserializeAttributes(json, target);
+      targetList.add(target);
+    }
   }
 
   /// Deserializes the specied [jsonText] into the OnDemandSerializable [target].
@@ -235,7 +255,7 @@ class Serializer {
 
   dynamic _deserializeValue(
       final Serializable parent, final String key, dynamic value) {
-    final transform = parent.transformers[key];
+    final transform = parent == null ? null : parent.transformers[key];
     if (transform != null) {
       return transform(value);
     }
@@ -252,13 +272,14 @@ class Serializer {
             'Deserialization Warning: no objectCreator for List "$key" defined.');
       }
       final listValue = function(null);
+
       for (final subValue in value) {
         listValue.add(_deserializeValue(parent, '$key.value', subValue));
       }
       return listValue;
     } else if (value is Map<String, dynamic>) {
       // this is a nested object or a nested map
-      final function = parent.objectCreators[key];
+      final function = parent == null ? null : parent.objectCreators[key];
       if (function == null) {
         throw StateError(
             'Unknown map or serializable  for object "$key": please define a corresponding objectCreator.');
