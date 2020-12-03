@@ -58,11 +58,29 @@ abstract class OnDemandSerializable {
   /// attributes['price'] = price;
   /// ```
   void write(Map<String, dynamic> attributes);
+
+  /// Reads all field keys and values from the specified [attributes] map.
+  /// This method is called after the de-serialization.
+  ///
+  /// Note: if you have complex fields such as nested objects, non generic lists or maps, you need to implement
+  /// both `Serializable` and `OnDemandSerializable`, extend `SerializableObject` and implement `OnDemandSerializable`,
+  /// or specify the corresponding `transformers` and `objectCreators` in the `Serializer` on demand methods.
+  ///
+  /// Compare `Serializer.serializeOnDemand()` and `Serializer.deserializeOnDemand()` methods.
+  /// ```dart
+  /// name = attributes['name'];
+  /// price = attributes['price'];
+  /// ```
   void read(Map<String, dynamic> attributes);
 }
 
-/// Implementation of `Serializable`.
-/// Extend this class if in doubt.
+/// Implementation of [Serializable].
+/// Extend this class if in doubt. Use the `attributes` field to store and retrieve values, e.g.
+/// ```dart
+///  int get price => attributes['price'];
+///  set price(int value) => attributes['price'] = value;
+/// ```
+/// Define creators and transformers as necessary in `objectCreators` and `transformers`.
 class SerializableObject implements Serializable {
   final Map<String, dynamic> _attributes = {};
   final Map<String, dynamic Function(dynamic)> _transformers = {};
@@ -89,6 +107,7 @@ class Serializer {
     return buffer.toString();
   }
 
+  /// Serializes an OnDemandSerializable object.
   String serializeOnDemand(OnDemandSerializable onDemandSerializable,
       {Map<String, dynamic Function(dynamic)> transformers}) {
     if (onDemandSerializable is Serializable) {
