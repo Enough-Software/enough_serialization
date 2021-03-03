@@ -38,7 +38,7 @@ abstract class Serializable {
   ///   objectCreators['my-map.value'] = (map) => MySerializable();
   ///```
   ///
-  Map<String, dynamic Function(Map<String, dynamic>)> get objectCreators;
+  Map<String, dynamic Function(Map<String, dynamic>?)> get objectCreators;
 }
 
 /// Supports classes with normal fields.
@@ -84,7 +84,7 @@ abstract class OnDemandSerializable {
 class SerializableObject implements Serializable {
   final Map<String, dynamic> _attributes = {};
   final Map<String, dynamic Function(dynamic)> _transformers = {};
-  final Map<String, dynamic Function(Map<String, dynamic>)> _objectCreators =
+  final Map<String, dynamic Function(Map<String, dynamic>?)> _objectCreators =
       {};
   @override
   Map<String, dynamic> get attributes => _attributes;
@@ -93,7 +93,7 @@ class SerializableObject implements Serializable {
   Map<String, dynamic Function(dynamic)> get transformers => _transformers;
 
   @override
-  Map<String, dynamic Function(Map<String, dynamic>)> get objectCreators =>
+  Map<String, dynamic Function(Map<String, dynamic>?)> get objectCreators =>
       _objectCreators;
 }
 
@@ -117,7 +117,7 @@ class Serializer {
 
   /// Serializes an OnDemandSerializable object.
   String serializeOnDemand(OnDemandSerializable onDemandSerializable,
-      {Map<String, dynamic Function(dynamic)> transformers}) {
+      {Map<String, dynamic Function(dynamic)>? transformers}) {
     if (onDemandSerializable is Serializable) {
       final serializable = onDemandSerializable as Serializable;
       onDemandSerializable.write(serializable.attributes);
@@ -154,8 +154,8 @@ class Serializer {
   /// Specify [transformers] to transform values such as enums or non-String Map keys.
   /// Specify [objectCreators] when you have Lists, Map or nested objects.
   void deserializeOnDemand(String jsonText, OnDemandSerializable target,
-      {Map<String, dynamic Function(dynamic)> transformers,
-      Map<String, dynamic Function(Map<String, dynamic>)> objectCreators}) {
+      {Map<String, dynamic Function(dynamic)>? transformers,
+      Map<String, dynamic Function(Map<String, dynamic>?)>? objectCreators}) {
     if (target is Serializable) {
       final serializable = target as Serializable;
       deserialize(jsonText, serializable);
@@ -172,7 +172,7 @@ class Serializer {
     target.read(genericSerializable.attributes);
   }
 
-  void _serializeAttributes(Serializable parent,
+  void _serializeAttributes(Serializable? parent,
       final Map<String, dynamic> attributes, final StringBuffer buffer) {
     buffer.write('{');
     var writeSeparator = false;
@@ -188,7 +188,7 @@ class Serializer {
     buffer.write('}');
   }
 
-  void _serializeValue(Serializable parent, final String key,
+  void _serializeValue(Serializable? parent, final String? key,
       final dynamic value, final StringBuffer buffer) {
     if (value == null) {
       buffer.write('null');
@@ -215,7 +215,7 @@ class Serializer {
     } else if (value is Map<String, dynamic>) {
       _serializeAttributes(parent, value, buffer);
     } else if (value is Map) {
-      final keyTransformer = parent.transformers['$key.key'];
+      final keyTransformer = parent!.transformers['$key.key'];
       if (keyTransformer == null) {
         throw StateError(
             'Invalid map with non-String keys encountered, unable to serialize: "$key": $value. Define a corresponding transformer "$key.key" to transform the keys of this map to String.');
@@ -229,12 +229,12 @@ class Serializer {
       _serializeAttributes(value, value.attributes, buffer);
     } else if (value is OnDemandSerializable) {
       final genericSerializable = SerializableObject();
-      genericSerializable.transformers.addAll(parent.transformers);
+      genericSerializable.transformers.addAll(parent!.transformers);
       value.write(genericSerializable.attributes);
       _serializeAttributes(
           genericSerializable, genericSerializable.attributes, buffer);
     } else {
-      final transform = parent.transformers[key];
+      final transform = parent!.transformers[key!];
       if (transform == null) {
         throw StateError(
             'Invalid value encountered, unable to serialize: "$key": $value. Define a corresponding transformer.');
@@ -246,7 +246,7 @@ class Serializer {
 
   void _deserializeAttributes(
       final Map<String, dynamic> json, final Serializable object,
-      [String parentKey]) {
+      [String? parentKey]) {
     for (final key in json.keys) {
       final value = json[key];
       object.attributes[key] = _deserializeValue(object, key, value);
@@ -279,7 +279,8 @@ class Serializer {
       return listValue;
     } else if (value is Map<String, dynamic>) {
       // this is a nested object or a nested map
-      final function = parent == null ? null : parent.objectCreators[key];
+      final dynamic Function(Map<String, dynamic>)? function =
+          parent == null ? null : parent.objectCreators[key];
       if (function == null) {
         throw StateError(
             'Unknown map or serializable  for object "$key": please define a corresponding objectCreator.');

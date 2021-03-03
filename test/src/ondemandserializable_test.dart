@@ -5,7 +5,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('On Demand Serilization Tests', () {
-    MySerializable mySerializable;
+    late MySerializable mySerializable;
 
     setUp(() {
       final props = {'firstname': 'firstValue', 'second': 'another value'};
@@ -49,26 +49,26 @@ void main() {
       expect(serializable.myEnum, MySerializableEnum.value3);
       expect(serializable.myText, 'Hello "World"');
       expect(serializable.myList, isNotEmpty);
-      expect(serializable.myList.length, 3);
+      expect(serializable.myList!.length, 3);
       expect(serializable.myList, ['one', 'two', 'three']);
       expect(serializable.myChild, isNotNull);
-      expect(serializable.myChild.myText, 'hi this is the child element');
-      expect(serializable.myChild.myNumber, 23);
+      expect(serializable.myChild!.myText, 'hi this is the child element');
+      expect(serializable.myChild!.myNumber, 23);
       expect(serializable.events, isNotEmpty);
-      expect(serializable.events.length, 2);
-      expect(serializable.events[0], isA<StartEvent>());
-      expect(serializable.events[0].type, EventType.start);
+      expect(serializable.events!.length, 2);
+      expect(serializable.events![0], isA<StartEvent>());
+      expect(serializable.events![0].type, EventType.start);
       expect(
-          (serializable.events[0] as StartEvent).players, [232, 12, 2423, 99]);
+          (serializable.events![0] as StartEvent).players, [232, 12, 2423, 99]);
 
-      expect(serializable.events[1], isA<EndEvent>());
-      expect(serializable.events[1].type, EventType.end);
-      expect((serializable.events[1] as EndEvent).winner, 2423);
+      expect(serializable.events![1], isA<EndEvent>());
+      expect(serializable.events![1].type, EventType.end);
+      expect((serializable.events![1] as EndEvent).winner, 2423);
       expect(serializable.properties, isNotNull);
-      expect(serializable.properties['firstname'], 'firstValue');
-      expect(serializable.properties['second'], 'another value');
-      expect(serializable.newsByYear[2020], 'enough serialization started');
-      expect(serializable.newsByYear[2021], 'the future is there');
+      expect(serializable.properties!['firstname'], 'firstValue');
+      expect(serializable.properties!['second'], 'another value');
+      expect(serializable.newsByYear![2020], 'enough serialization started');
+      expect(serializable.newsByYear![2021], 'the future is there');
     });
   });
 }
@@ -78,7 +78,7 @@ enum MySerializableEnum { value1, value2, value3 }
 enum EventType { start, end }
 
 class Event implements OnDemandSerializable {
-  EventType type;
+  EventType? type;
 
   Event(this.type);
 
@@ -96,7 +96,7 @@ class Event implements OnDemandSerializable {
 class StartEvent extends Event {
   StartEvent() : super(EventType.start);
 
-  List<int> players;
+  List<int>? players;
 
   @override
   void read(Map<String, dynamic> attributes) {
@@ -114,7 +114,7 @@ class StartEvent extends Event {
 class EndEvent extends Event {
   EndEvent() : super(EventType.end);
 
-  int winner;
+  int? winner;
 
   @override
   void read(Map<String, dynamic> attributes) {
@@ -130,14 +130,14 @@ class EndEvent extends Event {
 }
 
 class MySerializable implements OnDemandSerializable {
-  List<Event> events;
-  MySerializableEnum myEnum;
-  int myNumber;
-  String myText;
-  List<String> myList;
-  MySerializable myChild;
-  Map<String, String> properties;
-  Map<int, String> newsByYear;
+  List<Event>? events;
+  MySerializableEnum? myEnum;
+  int? myNumber;
+  String? myText;
+  List<String>? myList;
+  MySerializable? myChild;
+  Map<String, String>? properties;
+  Map<int, String>? newsByYear;
 
   String serialize() {
     final serializer = Serializer();
@@ -176,7 +176,7 @@ class MySerializable implements OnDemandSerializable {
         'my-list': (map) => <String>[],
         'events': (map) => <Event>[],
         'my-serializable': (map) => MySerializable(),
-        'events.value': (map) => map['type'] == 0 ? StartEvent() : EndEvent(),
+        'events.value': (map) => map!['type'] == 0 ? StartEvent() : EndEvent(),
         'properties': (map) => <String, String>{},
         'news-by-year': (map) => <int, String>{},
         // for StartEvent instances:

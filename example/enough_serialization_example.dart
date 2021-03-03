@@ -13,14 +13,14 @@ void main() {
 }
 
 class SimpleArticle extends SerializableObject {
-  String get name => attributes['name'];
-  set name(String value) => attributes['name'] = value;
+  String? get name => attributes['name'];
+  set name(String? value) => attributes['name'] = value;
 
-  int get price => attributes['price'];
-  set price(int value) => attributes['price'] = value;
+  int? get price => attributes['price'];
+  set price(int? value) => attributes['price'] = value;
 
-  double get popularity => attributes['popularity'];
-  set popularity(double value) => attributes['popularity'] = value;
+  double? get popularity => attributes['popularity'];
+  set popularity(double? value) => attributes['popularity'] = value;
 }
 
 void simpleExample() {
@@ -50,11 +50,11 @@ class ArticleWithEnum extends SerializableObject {
         value is ArticleArea ? value.index : ArticleArea.values[value];
   }
 
-  ArticleArea get area => attributes['area'];
-  set area(ArticleArea value) => attributes['area'] = value;
+  ArticleArea? get area => attributes['area'];
+  set area(ArticleArea? value) => attributes['area'] = value;
 
-  String get name => attributes['name'];
-  set name(String value) => attributes['name'] = value;
+  String? get name => attributes['name'];
+  set name(String? value) => attributes['name'] = value;
 }
 
 void enumExample() {
@@ -79,14 +79,14 @@ class Article extends SerializableObject {
         value is ArticleArea ? value.index : ArticleArea.values[value];
   }
 
-  ArticleArea get area => attributes['area'];
-  set area(ArticleArea value) => attributes['area'] = value;
+  ArticleArea? get area => attributes['area'];
+  set area(ArticleArea? value) => attributes['area'] = value;
 
-  String get name => attributes['name'];
-  set name(String value) => attributes['name'] = value;
+  String? get name => attributes['name'];
+  set name(String? value) => attributes['name'] = value;
 
-  int get price => attributes['price'];
-  set price(int value) => attributes['price'] = value;
+  int? get price => attributes['price'];
+  set price(int? value) => attributes['price'] = value;
 }
 
 class ElectronicsArticle extends Article {
@@ -94,8 +94,8 @@ class ElectronicsArticle extends Article {
     area = ArticleArea.electronics;
   }
 
-  String get recommendation => attributes['recommendation'];
-  set recommendation(String value) => attributes['recommendation'] = value;
+  String? get recommendation => attributes['recommendation'];
+  set recommendation(String? value) => attributes['recommendation'] = value;
 }
 
 class MusicArticle extends Article {
@@ -104,18 +104,18 @@ class MusicArticle extends Article {
     objectCreators['band'] = (map) => Band();
   }
 
-  Band get band => attributes['band'];
-  set band(Band value) => attributes['band'] = value;
+  Band? get band => attributes['band'];
+  set band(Band? value) => attributes['band'] = value;
 }
 
 class Band extends SerializableObject {
-  String get name => attributes['name'];
-  set name(String value) => attributes['name'] = value;
+  String? get name => attributes['name'];
+  set name(String? value) => attributes['name'] = value;
 
-  int get year => attributes['year'];
-  set year(int value) => attributes['year'] = value;
+  int? get year => attributes['year'];
+  set year(int? value) => attributes['year'] = value;
 
-  Band({String name, int year}) {
+  Band({String? name, int? year}) {
     this.name = name;
     this.year = year;
   }
@@ -126,7 +126,7 @@ class Order extends SerializableObject {
     objectCreators['articles'] = (map) => <Article>[];
     // the list articles contains different Articel instances depending on the specified area field:
     objectCreators['articles.value'] = (map) {
-      final int areaIndex = map['area'];
+      final int areaIndex = map!['area'];
       final area = ArticleArea.values[areaIndex];
       switch (area) {
         case ArticleArea.electronics:
@@ -138,8 +138,8 @@ class Order extends SerializableObject {
     };
   }
 
-  List<Article> get articles => attributes['articles'];
-  set articles(List<Article> value) => attributes['articles'] = value;
+  List<Article>? get articles => attributes['articles'];
+  set articles(List<Article>? value) => attributes['articles'] = value;
 }
 
 void complexExample() {
@@ -169,16 +169,16 @@ void complexExample() {
       '{"area": 1, "name": "The white album", "price": 1899, "band": {"name": "Beatles", "year": 1962}}]}';
   final deserializedOrder = Order();
   serializer.deserialize(inputJson, deserializedOrder);
-  for (var i = 0; i < deserializedOrder.articles.length; i++) {
-    final article = deserializedOrder.articles[i];
+  for (var i = 0; i < deserializedOrder.articles!.length; i++) {
+    final article = deserializedOrder.articles![i];
     print('$i: area: ${article.area}');
     print('$i: name: ${article.name}');
     print('$i: price: ${article.price}');
     if (article is ElectronicsArticle) {
       print('$i: recommendation: ${article.recommendation}');
     } else if (article is MusicArticle) {
-      print('$i: band-name: ${article.band.name}');
-      print('$i: band-year: ${article.band.year}');
+      print('$i: band-name: ${article.band!.name}');
+      print('$i: band-year: ${article.band!.year}');
     }
   }
 }
@@ -190,11 +190,11 @@ class MappedArticle extends SerializableObject {
         (value) => value is int ? value.toString() : int.parse(value);
   }
 
-  String get name => attributes['name'];
-  set name(String value) => attributes['name'] = value;
+  String? get name => attributes['name'];
+  set name(String? value) => attributes['name'] = value;
 
-  Map<int, String> get newsByYear => attributes['news-by-year'];
-  set newsByYear(Map<int, String> value) => attributes['news-by-year'] = value;
+  Map<int, String>? get newsByYear => attributes['news-by-year'];
+  set newsByYear(Map<int, String>? value) => attributes['news-by-year'] = value;
 }
 
 void mapExample() {
@@ -216,14 +216,14 @@ void mapExample() {
   final deserializedArticle = MappedArticle();
   serializer.deserialize(inputJson, deserializedArticle);
   print('deserialized article: ${article.name}');
-  for (final key in article.newsByYear.keys) {
-    print('$key: ${article.newsByYear[key]}');
+  for (final key in article.newsByYear!.keys) {
+    print('$key: ${article.newsByYear![key]}');
   }
 }
 
 class OnDemandArticle implements OnDemandSerializable {
-  String name;
-  Map<int, String> newsByYear;
+  String? name;
+  Map<int, String>? newsByYear;
 
   String serialize() {
     final serializer = Serializer();
@@ -283,7 +283,7 @@ void onDemandExample() {
   final deserializedArticle = OnDemandArticle();
   deserializedArticle.deserialize(inputJson);
   print('deserialized article: ${article.name}');
-  for (final key in article.newsByYear.keys) {
-    print('$key: ${article.newsByYear[key]}');
+  for (final key in article.newsByYear!.keys) {
+    print('$key: ${article.newsByYear![key]}');
   }
 }

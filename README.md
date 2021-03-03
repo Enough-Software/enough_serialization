@@ -7,7 +7,7 @@ Add this dependency your pubspec.yaml file:
 
 ```
 dependencies:
-  enough_serialization: ^1.1.0
+  enough_serialization: ^1.3.0
 ```
 The latest version or `enough_serialization` is [![enough_serialization version](https://img.shields.io/pub/v/enough_serialization.svg)](https://pub.dartlang.org/packages/enough_serialization).
 
@@ -19,7 +19,7 @@ You can choose between two serialization modes:
 1. Extend `SerializableObject` or implement `Serializable` for full control and complex cases. You have to store your field values in a dynamic map, however.
 2. Implement `OnDemandSerializable` to only write and read your field values to/from a dynamic map when needed. This comes with limitations when having deep nested structures - in that case any serialization names of complex fields must be unique.  
 
-### Serilization with `Serializable` and `SerializableObject`
+### Serialization with `Serializable` and `SerializableObject`
 
 The easiest way is 
  * extend `SerializableObject`
@@ -397,6 +397,10 @@ void main() {
 Please file feature requests and bugs at the [issue tracker][tracker].
 
 [tracker]: https://github.com/Enough-Software/enough_serialization/issues
+
+## Null-Safety
+
+enough_convert is null-safe from v1.3.0 onward.
 
 ## License
 

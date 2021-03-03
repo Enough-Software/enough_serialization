@@ -1,3 +1,7 @@
+## 1.3.0
+
+- Add null-safety.
+
 ## 1.2.0
 
 - Add option to directly serialize/deserialize list values with `Serializer.serializeList(...)` and `Serializer.deserializeList(...)`.
