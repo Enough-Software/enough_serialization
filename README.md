@@ -1,6 +1,6 @@
 
 Serialize to and deserialize from JSON in runtime. 
-This pure Dart library does not depend on build time generation.
+This pure Dart library does not depend on build time code generation.
 
 ## Installation
 Add this dependency your pubspec.yaml file:
