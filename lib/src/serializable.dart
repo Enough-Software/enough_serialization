@@ -193,7 +193,7 @@ class Serializer {
     if (value == null) {
       buffer.write('null');
     } else if (value is String) {
-      final text = value.replaceAll('"', r'\"');
+      final text = value.replaceAll('"', r'\"').replaceAll('\n', '\\n');
       buffer..write('"')..write(text)..write('"');
     } else if (value is int) {
       buffer.write(value);
