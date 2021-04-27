@@ -7,7 +7,7 @@ Add this dependency your pubspec.yaml file:
 
 ```
 dependencies:
-  enough_serialization: ^1.3.0
+  enough_serialization: ^1.4.0
 ```
 The latest version or `enough_serialization` is [![enough_serialization version](https://img.shields.io/pub/v/enough_serialization.svg)](https://pub.dartlang.org/packages/enough_serialization).
 

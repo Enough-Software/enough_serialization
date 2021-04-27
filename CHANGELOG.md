@@ -1,3 +1,7 @@
+## 1.4.0
+
+- Fixed deserialization bug when String value contains a newline character, #5 
+
 ## 1.3.0
 
 - Add null-safety.
